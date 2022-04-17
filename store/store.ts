@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { useDispatch } from 'react-redux'
 import modalReducer from "./modal"
+import cameraPermissionReducer from "./cameraPermission"
 
 const store = configureStore({
   reducer: {
-    modalVisible: modalReducer
+    modalVisible: modalReducer,
+    cameraPermission : cameraPermissionReducer
   }
 })
 

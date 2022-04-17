@@ -89,7 +89,7 @@ const App = () => {
               }
 
               // You can return any component that you like here!
-              return <IconButton icon={iconName} color={color} size={size}/>;
+              return <IconButton icon={iconName} color={color} size={size} animated={true}/>;
             },
             tabBarActiveTintColor : (route.name === "Entrer Produits" ? "green" : route.name === "Consommer" ? "orange" : route.name === "Gérer Produits" ? "purple" : "red"),
             tabBarInactiveTintColor: 'gray',
