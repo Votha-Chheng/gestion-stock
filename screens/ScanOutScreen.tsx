@@ -8,6 +8,7 @@ import { hideModal, showModal } from '../store/modal'
 import { getCameraPermission } from '../store/cameraPermission'
 import Loader from '../components/Loader'
 import LaunchCam from '../components/LaunchCam'
+import ConsumeProduct from '../components/ConsumeProduct'
 
 const ScanInScreen:FC = () => {
   
@@ -16,13 +17,15 @@ const ScanInScreen:FC = () => {
   const [scanned, setScanned] = useState<boolean>(false);
 
   const {visible} = useSelector((state: RootState) => state.modalVisible)
-  const {cameraStatus, loading, success} = useSelector((state: RootState) => state.cameraPermission)
+  const {cameraStatus, loading, errorCam} = useSelector((state: RootState) => state.cameraPermission)
 
   const dispatch = useDispatch()
 
 
   useEffect(()=>{
-    dispatch(getCameraPermission())
+    cameraStatus !=="granted" 
+    ? dispatch(getCameraPermission())
+    : null
   }, [cameraStatus])
 
   const modalIstrue = ()=>{
@@ -62,14 +65,14 @@ const ScanInScreen:FC = () => {
           <Provider>
             <Portal>
               <Modal visible={visible} onDismiss={modalIsFalse} contentContainerStyle={styles.modalStyle}>
-                <Text>{`Bar code with type ${type} and data ${data} has been scanned!`}</Text>
+                <ConsumeProduct type={type} data={data} />
               </Modal>
             </Portal>
           </Provider>
         </View>
       )
 
-    } else if(cameraStatus === "denied" || success === false){
+    } else if(cameraStatus === "denied" || errorCam){
       return <Text>Un problème est survenu avec la caméra. Veuillez redémarrez l'application.</Text>
 
     }

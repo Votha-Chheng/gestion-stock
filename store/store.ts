@@ -2,11 +2,22 @@ import { configureStore } from '@reduxjs/toolkit'
 import { useDispatch } from 'react-redux'
 import modalReducer from "./modal"
 import cameraPermissionReducer from "./cameraPermission"
+import scanningReducer from "./scanning"
+import codeBarDataTypeReducer from "./dataBarCode"
+import errorMessageReducer from './errorMessage'
+import categoryReducer from './categoryReducer'
+import productReducer from './productReducer'
 
 const store = configureStore({
   reducer: {
     modalVisible: modalReducer,
-    cameraPermission : cameraPermissionReducer
+    cameraPermission : cameraPermissionReducer,
+    scanning : scanningReducer,
+    codeBarDataType : codeBarDataTypeReducer,
+    categoryState : categoryReducer,
+    productState : productReducer,
+    errorMessage : errorMessageReducer,
+
   }
 })
 

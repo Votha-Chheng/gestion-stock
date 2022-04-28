@@ -9,10 +9,14 @@ import ListeProduitsScreen from './screens/ListeProduitsScreen';
 import ProduitsARacheter from './screens/ProduitsARacheter';
 import ScanInScreen from './screens/ScanInScreen';
 import ScanOutScreen from './screens/ScanOutScreen';
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Provider } from 'react-redux';
-import store from './store/store';
+import { Provider, useSelector } from 'react-redux';
+import store, { RootState } from './store/store';
+import * as SplashScreen from 'expo-splash-screen';
+import { Inter_900Black } from '@expo-google-fonts/inter';
+import {Roboto_400Regular, Roboto_900Black} from '@expo-google-fonts/roboto';
+import {useFonts} from 'expo-font';
 
 export type RootStackParams = {
   Home
@@ -26,20 +30,49 @@ const RootTab = createBottomTabNavigator();
 
 const App = () => {
 
+  let fontsLoading = useFonts({
+    Inter_900Black,
+    Roboto_400Regular,
+    Roboto_900Black
+
+  })
+
+  const displaySplash = async()=>{
+    if (!fontsLoading) {
+      try{
+        await SplashScreen.preventAutoHideAsync()
+      }
+      catch(err){
+        console.log(err)
+        throw err;
+        
+      }
+
+    } else {
+      try{
+        await SplashScreen.hideAsync()
+
+      }
+      catch(err){
+        console.log(err)
+        throw err;
+
+      }
+    }
+  }
+
+  useEffect(()=>{
+    displaySplash()
+  }, [fontsLoading])
+
   return (
     <Provider store={store}>
       <NavigationContainer>
         <View>
           <StatusBar style="dark" />
         </View>
-        {/* <RootStack.Navigator initialRouteName='Home'>
-          <RootStack.Screen component={HomeScreen} name="Home"/>
-          <RootStack.Screen component={ScanInScreen} name="EntrerProduits"/>
-          <RootStack.Screen component={ScanOutScreen} name="ConsommerProduits"/>
-          <RootStack.Screen component={ListeProduitsScreen} name="ListeProduits"/>
-        </RootStack.Navigator> */}
         <RootTab.Navigator
-          initialRouteName='EntrerProduits'
+          initialRouteName='Entrer Produits'
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
               let iconName;
