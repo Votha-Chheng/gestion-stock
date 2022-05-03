@@ -1,6 +1,5 @@
 //import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
-import HomeScreen from './screens/HomeScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,12 +10,28 @@ import ScanInScreen from './screens/ScanInScreen';
 import ScanOutScreen from './screens/ScanOutScreen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Provider, useSelector } from 'react-redux';
-import store, { RootState } from './store/store';
+import { Provider } from 'react-redux';
+import store from './store/store';
 import * as SplashScreen from 'expo-splash-screen';
-import { Inter_900Black } from '@expo-google-fonts/inter';
+import { Inter_900Black, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import {Roboto_400Regular, Roboto_900Black} from '@expo-google-fonts/roboto';
+import {
+  Rubik_300Light,
+  Rubik_400Regular,
+  Rubik_500Medium,
+  Rubik_600SemiBold,
+  Rubik_700Bold,
+  Rubik_800ExtraBold,
+  Rubik_900Black,
+  Rubik_300Light_Italic,
+  Rubik_400Regular_Italic,
+  Rubik_500Medium_Italic,
+  Rubik_600SemiBold_Italic,
+  Rubik_700Bold_Italic,
+  Rubik_800ExtraBold_Italic,
+  Rubik_900Black_Italic,} from '@expo-google-fonts/rubik';
 import {useFonts} from 'expo-font';
+
 
 export type RootStackParams = {
   Home
@@ -32,9 +47,24 @@ const App = () => {
 
   let fontsLoading = useFonts({
     Inter_900Black,
+    Inter_500Medium,
     Roboto_400Regular,
-    Roboto_900Black
-
+    Inter_600SemiBold,
+    Roboto_900Black,
+    Rubik_300Light,
+    Rubik_400Regular,
+    Rubik_500Medium,
+    Rubik_600SemiBold,
+    Rubik_700Bold,
+    Rubik_800ExtraBold,
+    Rubik_900Black,
+    Rubik_300Light_Italic,
+    Rubik_400Regular_Italic,
+    Rubik_500Medium_Italic,
+    Rubik_600SemiBold_Italic,
+    Rubik_700Bold_Italic,
+    Rubik_800ExtraBold_Italic,
+    Rubik_900Black_Italic,
   })
 
   const displaySplash = async()=>{
@@ -99,7 +129,7 @@ const App = () => {
                   size = 20
                 }
 
-              } else if (route.name === 'Gérer Produits') {
+              } else if (route.name === 'Inventaire') {
                 iconName = 'clipboard-list-outline'
 
                 if(focused){
@@ -124,7 +154,7 @@ const App = () => {
               // You can return any component that you like here!
               return <IconButton icon={iconName} color={color} size={size} animated={true}/>;
             },
-            tabBarActiveTintColor : (route.name === "Entrer Produits" ? "green" : route.name === "Consommer" ? "orange" : route.name === "Gérer Produits" ? "purple" : "red"),
+            tabBarActiveTintColor : (route.name === "Entrer Produits" ? "green" : route.name === "Consommer" ? "orange" : route.name === "Inventaire" ? "purple" : "red"),
             tabBarInactiveTintColor: 'gray',
             tabBarLabelStyle : {
               paddingBottom : 7.5,
@@ -136,7 +166,7 @@ const App = () => {
         >
           <RootTab.Screen component={ScanInScreen} name="Entrer Produits" options={{title:"Entrer Produits", unmountOnBlur:true}}/>
           <RootTab.Screen component={ScanOutScreen} name="Consommer" options={{title:"Consommer", unmountOnBlur:true}}/>
-          <RootTab.Screen component={ListeProduitsScreen} name="Gérer Produits"/>
+          <RootTab.Screen component={ListeProduitsScreen} name="Inventaire"/>
           <RootTab.Screen component={ProduitsARacheter} name="A racheter" options={{ tabBarBadge: 3 }}/>
         </RootTab.Navigator>
       </NavigationContainer>

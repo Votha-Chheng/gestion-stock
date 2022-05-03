@@ -3,20 +3,17 @@ import React, { FC, useEffect, useState } from 'react'
 import { Button, TextInput } from 'react-native-paper'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '../store/store'
-import { hideModal } from '../store/modal'
-import { unscan } from '../store/scanning'
-import { resetCodeBarData } from '../store/dataBarCode'
 import CategorySchema, { Category } from '../models/Category'
 import Toast from 'react-native-toast-message';
 import { getErrorToTrueOrFalse, getMessageError } from '../store/errorMessage'
-import ProductSchema from '../models/Product'
+import ProductSchema, { Product } from '../models/Product'
 import { createButtonAlert } from '../utils'
 import Loader from './Loader'
 import NewProductFabricant from './NewProductFabricant'
 import globalStyles from '../globalStyles'
 import NewProductName from './NewProductName'
 import CategoryPicker from './CategoryPicker'
-import { getAllCategories } from '../store/categoryReducer'
+import Realm from 'realm'
 
 
 type NewProductProps = {
@@ -28,9 +25,9 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
 
   const [fabricant, setFabricant] = useState<string>("")
   const [chooseCategory, setChooseCategory] = useState<Category>({_id: null, nom: ""})
-  const [categoryId, setCategoryId] = useState<number>(null)
   const [quantity, setQuantity] = useState<string>("1")
   const [newCategory, setNewCategory] = useState<string>("")
+  const [createCatMode, setCreateCatMode] = useState<boolean>(false)
   const [nom, setNom] = useState<string>("")
   const [focused, setFocused] = useState<boolean>(false)
   const [stockLimite, setStockLimite] = useState<string>("1")
@@ -38,22 +35,14 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
   const [displayTel, setDisplayTel] = useState<string>("")
   const [webSite, setWebSite] = useState<string>("")
   const [loadingCreation, setLoadingCreation] = useState<boolean>(false)
+  const [realm, setRealm] = useState<any>(null)
 
   const {visible} = useSelector((state: RootState) => state.modalVisible)
   const {scanned} = useSelector((state: RootState) => state.scanning)
-  const {errorLoadCat, categoryList} = useSelector((state: RootState) => state.categoryState)
   const {error, message} = useSelector((state: RootState) => state.errorMessage)
-
 
   const dispatch = useDispatch()
 
-  const resetEnter = () =>{
-
-    dispatch(hideModal())
-    dispatch(unscan())
-    dispatch(resetCodeBarData())
-  
-  }
 
   useEffect(()=>{
     if(error){
@@ -62,11 +51,25 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
   }, [error])
 
   useEffect(()=>{
-    dispatch(getAllCategories())
+    Realm.open({
+      path:"myrealm",
+      schema: [ProductSchema, CategorySchema],
+      deleteRealmIfMigrationNeeded: true,
+    })
+    .then(realm => {
+      setRealm(realm)
 
+    })
+
+    return(()=>{
+      if (realm !== null && !realm.isClosed) {
+        realm.close();
+      }
+    })
+    
   }, [])
-  
-  const showToast = (type:string, message1:string, message2:string)=>{
+
+  const showToast = (type: string, message1: string, message2: string)=>{
     Toast.show({
       type,
       text1: message1,
@@ -81,44 +84,31 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
   
   const createProduct = async ()=>{
     try {
-      let newProduct:object
-      let productAdded: object = null
+      let newProduct: Product
 
       setLoadingCreation(true)
-
-      const realm = await Realm.open({
-        path:"myrealm",
-        schema: [ProductSchema, CategorySchema],
-        deleteRealmIfMigrationNeeded: true,
-      })
 
       realm.write(()=>{
         newProduct = realm.create("Product", {
           _id: data,
           codeBarType: type.toString(),
           nom: nom,
-          
-          //Trouver id de la catégorie :
-          categorie: {nom: chooseCategory, _id: categoryId},
-          telFournisseur: telFournisseur,
+          marque: fabricant,
+          categorie: realm.objectForPrimaryKey("Category", chooseCategory._id),
+          telFournisseur: +telFournisseur,
           siteFournisseur : webSite,
-          qty:quantity,
-          stockLimite:stockLimite
+          qty:+quantity,
+          stockLimite:+stockLimite
         })
-        // const allProducts = realm.objects('Product')
-        // productAdded = allProducts.filtered(`_id = '${data}'`)
-
-        // if(productAdded !== null) {
-        //   setLoadingCreation(false)
-        //   showToast("success", "Parfait !", "Nouveau produit ajouté dans l'inventaire.")
-        //   resetEnter()
-        // }
       })
 
+      showToast("success","Succès", `${newProduct.nom} a été ajouté dans l'inventaire.`)
+
     } catch (error) {
-      console.log(error)
+      console.log(error.message)
       showToast("error", "Erreur", "Un problème est survenu. Recommencez l'opération.")
       dispatch(getMessageError("Impossible de trouver la catégorie."))
+
       return
     }
   }
@@ -129,12 +119,6 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
     let category = null
 
     try {
-      const realm = await Realm.open({
-        path:"myrealm",
-        schema: [CategorySchema],
-        deleteRealmIfMigrationNeeded: true,
-      })
-
       realm.write(()=>{
 
         const tempCategories = realm.objects("Category")
@@ -151,7 +135,6 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
 
         }
 
-        // category = singleCategory.map((cat: any) => ({_id: cat._id, nom: cat.nom}))
         setChooseCategory({_id: singleCategory[0]._id, nom: singleCategory[0].nom})
         console.log(chooseCategory._id)
       })
@@ -165,22 +148,17 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
 
   const createNewCategory = async()=>{
     try {
-      let newCat:object
-
-      const realm = await Realm.open({
-        path:"myrealm",
-        schema: [CategorySchema],
-        deleteRealmIfMigrationNeeded: true,
-      })
-    
       realm.write(()=>{
         const categories = realm.objects("Category")
-        const categoryExist = categories.filtered(`nom = ${newCategory.toString()}`)
-        if(categoryExist === null){
+        const categoryExist = categories.filtered(`nom = "${newCategory}"`)
+
+        console.log("categoryExist " + categoryExist)
+
+        if(categoryExist.length>0){
           showToast("error", "Impossible d'ajouter", "Cette catégorie existe déjà.")
 
         } else {
-            newCat = realm.create("Category", {
+            realm.create("Category", {
             _id: Date.now(),
             nom : newCategory
           })
@@ -190,9 +168,11 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
       
       })
 
-    } catch (err) {
-      showToast("error", "Impossible d'ajouter", "Cette catégorie existe déjà.")
+      setCreateCatMode(false)
 
+    } catch (err) {
+      showToast("error", "Impossible d'ajouter", "Une erreur est survenue.")
+      console.log(err.message)
       return
 
     }
@@ -240,8 +220,13 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
   }
 
   const onValuePickerChange = (item: string) : void=>{
-    getSingleCategory(item, null)
+    if(item !== "Nouvelle catégorie"){
+      getSingleCategory(item, null)
 
+    } else {
+      setCreateCatMode(true)
+      
+    }
   }
 
   if(loadingCreation){
@@ -265,12 +250,8 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
           </Text>
         </View>
         <NewProductFabricant fabricant={fabricant} onChangeFabricant ={setFabricant}/>
+        
         {
-          // categoryId 
-          // ?
-          // <Text>{categoryId.toString()} + {typeof(categoryList)}</Text>
-          // :
-          // <Text>Nothing to display</Text>
           <Text>
             {chooseCategory && chooseCategory._id}
           </Text>
@@ -295,7 +276,9 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
           newCategory={newCategory}
           onChangeCategory={setNewCategory}
           createNewCategory = {createNewCategory}
-
+          createCatMode={createCatMode}
+          createCatModeToFalse={()=>setCreateCatMode(false)}
+          realm = {realm}
         />
         
         <TextInput

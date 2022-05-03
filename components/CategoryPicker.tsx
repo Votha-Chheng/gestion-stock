@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React, { FC } from 'react'
+import React, { FC, useEffect, useState } from 'react'
 import { Picker } from '@react-native-picker/picker'
-import { useSelector } from 'react-redux'
-import { RootState } from '../store/store'
 import { Button, TextInput } from 'react-native-paper'
 import globalStyles from '../globalStyles'
 import { Category } from '../models/Category'
@@ -16,6 +14,9 @@ type CategoryPickerProps = {
   newCategory: string
   onChangeCategory: Function
   createNewCategory: any
+  createCatMode: boolean,
+  createCatModeToFalse: Function
+  realm: any
 }
 
 const CategoryPicker: FC<CategoryPickerProps> = ({
@@ -26,16 +27,32 @@ const CategoryPicker: FC<CategoryPickerProps> = ({
   onFocus, 
   onBlur, 
   onChangeCategory, 
-  createNewCategory
+  createNewCategory,
+  createCatMode,
+  createCatModeToFalse,
+  realm
 }: CategoryPickerProps) => {
 
-  const {errorLoadCat, categoryList} = useSelector((state: RootState) => state.categoryState)
+  const [categoryList, setCategoryList] = useState<any[]>()
+  const [errorCatList, setErrorCatList] = useState<boolean>()
+
+  useEffect(()=>{
+
+    realm && realm.write(()=>{
+      const tempCategories = realm.objects("Category")
+      console.log(tempCategories)  
+      setCategoryList(tempCategories)   
+
+    })
+
+  }, [realm])
+
 
   return (
     <View style={{borderColor: "#c4cfd4", borderWidth:2, padding:2.5, marginBottom:10}}>
     <Text style={{color:"#6e6e72", fontSize:15, marginVertical:5, marginLeft:10}}>Catégorie du produit</Text>
       {
-        chooseCategory.nom !=="Nouvelle catégorie"
+        !createCatMode
         ?
         <Picker 
           mode='dialog' 
@@ -50,7 +67,7 @@ const CategoryPicker: FC<CategoryPickerProps> = ({
           <Picker.Item label="Choisir catégorie..." enabled={!focused ? true : false} value={null} color='#66666e'/>  
           <Picker.Item label="Nouvelle catégorie" value={"Nouvelle catégorie"} color='#292f36'/>
           {
-            categoryList.length>0 && categoryList.map((cat:any) => {
+            categoryList && categoryList.map((cat:Category) => {
               return (
                 <Picker.Item key={cat._id} label={cat.nom} value={cat.nom} color='#292f36' />
               )
@@ -79,7 +96,7 @@ const CategoryPicker: FC<CategoryPickerProps> = ({
             >
               Ajouter catégorie
             </Button>
-            <Button mode='contained' color="#b64e3e" labelStyle={{fontSize:12}} style={{width:"40%", marginBottom:5}} onPress={()=>onChangeCategory(null)}>Annuler</Button>
+            <Button mode='contained' color="#b64e3e" labelStyle={{fontSize:12}} style={{width:"40%", marginBottom:5}} onPress={()=>createCatModeToFalse()}>Annuler</Button>
           </View>
         </View>            
       }  

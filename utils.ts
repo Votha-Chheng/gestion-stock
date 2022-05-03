@@ -1,17 +1,7 @@
 import { Alert } from "react-native"
-
-export const asyncWrapper = (func: Function, errorMsg: string) =>{
-
-  return async() => {
-    try {
-      await func()
-
-    } catch (err) {
-      return errorMsg
-      
-    }
-  }
-}
+import Realm from 'realm'
+import CategorySchema from "./models/Category"
+import ProductSchema from "./models/Product"
 
 export const createButtonAlert = (titre: string, messageAlert:string, onPressFunction:any) : void => {
   Alert.alert(
@@ -26,3 +16,14 @@ export const createButtonAlert = (titre: string, messageAlert:string, onPressFun
     ]
   )
 }
+
+export const openRealm = async() =>{
+
+  const realm = await Realm.open({
+    path:"myrealm",
+    schema: [ProductSchema, CategorySchema],
+    deleteRealmIfMigrationNeeded: true,
+  })
+  
+  return realm
+} 

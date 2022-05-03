@@ -14,6 +14,12 @@ const globalStyles = StyleSheet.create({
     padding:0,
     width: '100%'
   },
+
+  screenTitle: {
+    fontSize: 25,
+    textAlign:"center",
+    fontFamily:"Roboto_900Black"
+  }
 })
 
 export default globalStyles

@@ -13,23 +13,22 @@ import { scan, unscan } from '../store/scanning'
 import { getData, getType, resetCodeBarData } from '../store/dataBarCode'
 import Toast, { BaseToast } from 'react-native-toast-message';
 
+
 const ScanInScreen:FC = () => {
 
   const {visible} = useSelector((state: RootState) => state.modalVisible)
   const {cameraStatus, loading, errorCam} = useSelector((state: RootState) => state.cameraPermission)
   const {scanned} = useSelector((state: RootState) => state.scanning)
   const {data, type} = useSelector((state: RootState) => state.codeBarDataType)
-  const {} = useSelector((state: RootState) => state.categoryState)
-
 
   const dispatch = useDispatch()
 
+  
 
   useEffect(()=>{
-    cameraStatus !=="granted"
-    ? dispatch(getCameraPermission())
-    : null
-  }, [cameraStatus])
+    dispatch(getCameraPermission())
+
+  }, [])
 
   useEffect(()=>{
     dispatch(resetCodeBarData())
