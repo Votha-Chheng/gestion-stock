@@ -1,18 +1,10 @@
-//import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { IconButton } from 'react-native-paper';
-import ListeProduitsScreen from './screens/ListeProduitsScreen';
-import ProduitsARacheter from './screens/ProduitsARacheter';
-import ScanInScreen from './screens/ScanInScreen';
-import ScanOutScreen from './screens/ScanOutScreen';
-import { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Provider } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './store/store';
 import * as SplashScreen from 'expo-splash-screen';
+import Toast, { BaseToast } from 'react-native-toast-message';
 import { Inter_900Black, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import {Roboto_400Regular, Roboto_900Black} from '@expo-google-fonts/roboto';
 import {
@@ -31,6 +23,8 @@ import {
   Rubik_800ExtraBold_Italic,
   Rubik_900Black_Italic,} from '@expo-google-fonts/rubik';
 import {useFonts} from 'expo-font';
+import NavigationScreen from './screens/NavigationScreen';
+
 
 
 export type RootStackParams = {
@@ -41,7 +35,6 @@ export type RootStackParams = {
 }
 
 const RootStack = createNativeStackNavigator<RootStackParams>();
-const RootTab = createBottomTabNavigator();
 
 const App = () => {
 
@@ -73,19 +66,18 @@ const App = () => {
         await SplashScreen.preventAutoHideAsync()
       }
       catch(err){
-        console.log(err)
-        throw err;
+        console.log(err.message)
+        return err.message
         
       }
-
     } else {
       try{
         await SplashScreen.hideAsync()
 
       }
       catch(err){
-        console.log(err)
-        throw err;
+        console.log(err.message)
+        return err.message;
 
       }
     }
@@ -93,83 +85,62 @@ const App = () => {
 
   useEffect(()=>{
     displaySplash()
+    
   }, [fontsLoading])
+
+
+  const toastConfig = {
+    success: (props: any) =>(
+      <BaseToast
+        {...props}
+        style={{ borderLeftColor: 'green' }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: 17.5,
+          color:"green"
+        }}
+        text2Style={{
+          fontSize: 15,
+          color:"green"
+        }}
+      />
+    ),
+    info: (props:any) =>(
+      <BaseToast
+        {...props}
+        style={{ borderLeftColor: '#1D9BF0' }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: 17.5,
+          color:"#1D9BF0"
+        }}
+        text2Style={{
+          fontSize: 15,
+          color:"#1D9BF0"
+        }}
+      />
+    ),
+    error: (props:any) =>(
+      <BaseToast
+        {...props}
+        style={{ borderLeftColor: 'red' }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{
+          fontSize: 15,
+          color:"red"
+        }}
+        text2Style={{
+          fontSize: 13,
+          color:"black"
+        }}
+      />
+    )
+  }
 
   return (
     <Provider store={store}>
-      <NavigationContainer>
-        <View>
-          <StatusBar style="dark" />
-        </View>
-        <RootTab.Navigator
-          initialRouteName='Entrer Produits'
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
-              let iconName;
-
-              if (route.name === 'Entrer Produits') {
-                if( focused){
-                  iconName = 'arrow-down-bold'
-                  color = "green"
-                  size = 30
-                } else {
-                  iconName = 'arrow-down-bold-outline'
-                  color = "grey"
-                  size = 20
-                }
-                  
-              } else if (route.name === 'Consommer') {
-                if(focused){
-                  iconName = 'arrow-up-bold'
-                  color = "orange"
-                  size = 30
-                } else {
-                  iconName = 'arrow-up-bold-outline'
-                  color = "grey"
-                  size = 20
-                }
-
-              } else if (route.name === 'Inventaire') {
-                iconName = 'clipboard-list-outline'
-
-                if(focused){
-                  color = "purple"
-                  size = 25
-                } else {
-                  color = "grey"
-                  size = 20
-                }
-              } else if (route.name === 'A racheter') {
-                iconName = "flask-empty-minus-outline"
-
-                if(focused){
-                  color = "red"
-                  size = 25
-                } else {
-                  color = "grey"
-                  size = 20
-                }
-              }
-
-              // You can return any component that you like here!
-              return <IconButton icon={iconName} color={color} size={size} animated={true}/>;
-            },
-            tabBarActiveTintColor : (route.name === "Entrer Produits" ? "green" : route.name === "Consommer" ? "orange" : route.name === "Inventaire" ? "purple" : "red"),
-            tabBarInactiveTintColor: 'gray',
-            tabBarLabelStyle : {
-              paddingBottom : 7.5,
-              marginTop:-5,
-              fontSize : 12,
-              fontWeight: "bold",
-            }
-          })}
-        >
-          <RootTab.Screen component={ScanInScreen} name="Entrer Produits" options={{title:"Entrer Produits", unmountOnBlur:true}}/>
-          <RootTab.Screen component={ScanOutScreen} name="Consommer" options={{title:"Consommer", unmountOnBlur:true}}/>
-          <RootTab.Screen component={ListeProduitsScreen} name="Inventaire"/>
-          <RootTab.Screen component={ProduitsARacheter} name="A racheter" options={{ tabBarBadge: 3 }}/>
-        </RootTab.Navigator>
-      </NavigationContainer>
+      <NavigationScreen/>
+      <Toast config={toastConfig}/>
     </Provider>
     
   );

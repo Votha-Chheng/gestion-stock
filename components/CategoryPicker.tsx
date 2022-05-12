@@ -82,7 +82,7 @@ const CategoryPicker: FC<CategoryPickerProps> = ({
             value={newCategory}
             outlineColor="#621b00"
             activeOutlineColor="#a32e00"
-            onChangeText={text => onChangeCategory(text)}
+            onChangeText={text => onChangeCategory(text.trim())}
             autoComplete={false}
             style={globalStyles.input}
           />

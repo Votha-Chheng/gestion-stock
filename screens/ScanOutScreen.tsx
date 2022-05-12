@@ -9,42 +9,103 @@ import { getCameraPermission } from '../store/cameraPermission'
 import Loader from '../components/Loader'
 import LaunchCam from '../components/LaunchCam'
 import ConsumeProduct from '../components/ConsumeProduct'
+import ProductSchema, { Product } from '../models/Product'
+import CategorySchema from '../models/Category'
+import { newQtyToNumber, showToast } from '../utils'
+import Toast, { BaseToast } from 'react-native-toast-message';
+import { scan, unscan } from '../store/scanning'
+import { getData, getType, resetCodeBarData } from '../store/dataBarCode'
 
-const ScanInScreen:FC = () => {
-  
-  const [data, setData] = useState<string>("")
-  const [type, setType] = useState<string>("")
-  const [scanned, setScanned] = useState<boolean>(false);
+type ScanOutScreenProps = {
+  realm: Realm
+  allProducts: Product[]
+}
+const ScanOutScreen:FC<ScanOutScreenProps> = ({realm, allProducts}: ScanOutScreenProps) => {
 
+  const [productExists, setProductExists] = useState<boolean>(false)
+  const [productAsProp, setProductAsProp] = useState<any>(null)
+  const [qtyOut, setQtyOut] = useState<string>("1")
+
+  const {data, type} = useSelector((state: RootState) => state.codeBarDataType)
+  const {scanned} = useSelector((state: RootState) => state.scanning)
   const {visible} = useSelector((state: RootState) => state.modalVisible)
   const {cameraStatus, loading, errorCam} = useSelector((state: RootState) => state.cameraPermission)
 
   const dispatch = useDispatch()
 
+  useEffect(()=>{
+    dispatch(getCameraPermission())
+
+  }, [])
 
   useEffect(()=>{
-    cameraStatus !=="granted" 
-    ? dispatch(getCameraPermission())
-    : null
-  }, [cameraStatus])
+    return ()=>{
+      dispatch(resetCodeBarData())
+      dispatch(hideModal())
+      dispatch(unscan())
+    }
+  }, [])
 
-  const modalIstrue = ()=>{
-    dispatch(showModal())
+
+  const productExistOrNot = (data: number)=>{
+    const product = realm.objectForPrimaryKey("Product", data)
+
+    if(product === undefined || product === null){
+      console.log("Product is undefined.")
+      setProductExists(false)
+
+    } else {
+      console.log("From ScanInScreen : " + product)
+      setProductExists(true)
+      setProductAsProp(product)
+    }
+      
   }
 
-  const modalIsFalse = ()=>{
+  const validateQtyOut = (): void=>{
+    const product:any = realm.objectForPrimaryKey("Product", data)
+
+    if(product.qty - newQtyToNumber(qtyOut) < 0) {
+      showToast("error", `Quantité à retirer trop grande : ${qtyOut} !`, `Le stock actuel est de ${product.qty} unités.`)
+    
+    } else {
+      realm.write(()=>{
+        product.qty -= newQtyToNumber(qtyOut)
+        setProductAsProp(product)
+
+      })
+
+      const productUpdated:any = realm.objectForPrimaryKey("Product", data)
+
+      dispatch(hideModal())
+      showToast("success", "Stock mis à jour", `Stock de ${productUpdated.nom} descendu à ${productUpdated.qty} unités.`)
+          
+      setTimeout(()=>{
+        dispatch(unscan())
+      }, 1500)
+
+      dispatch(resetCodeBarData())
+      setQtyOut("1")
+    } 
+  }
+
+  const cancelQtyOut = ()=>{
     dispatch(hideModal())
-    setScanned(false)
-    setData("")
-    setType("")
+    setTimeout(()=>{
+      dispatch(unscan())
+    }, 3000)
+    dispatch(resetCodeBarData())
+    setQtyOut("1")
+    showToast("info", "Stock inchangé", "Mise à jour du stock annulée.")
   }
 
   const handleBarCodeScanned = ({ type, data }) => {
-    setData(data)
-    setType(type)
-    setScanned(true)
-    modalIstrue()
-  };
+    dispatch(scan())
+    dispatch(getData(data))
+    dispatch(getType(type))
+    dispatch(showModal())
+    productExistOrNot(data)
+  }
 
   if(loading){
     return (
@@ -64,9 +125,13 @@ const ScanInScreen:FC = () => {
           />
           <Provider>
             <Portal>
-              <Modal visible={visible} onDismiss={modalIsFalse} contentContainerStyle={styles.modalStyle}>
-                <ConsumeProduct type={type} data={data} />
-              </Modal>
+              {
+                productExists
+                &&
+                <Modal visible={visible} dismissable={false} contentContainerStyle={styles.modalStyle}>  
+                  <ConsumeProduct product={productAsProp} qtyOut={qtyOut} setQtyOut={setQtyOut} validateQtyOut={validateQtyOut} cancelQtyOut={cancelQtyOut} data={data} />
+                </Modal>
+              }
             </Portal>
           </Provider>
         </View>
@@ -79,7 +144,7 @@ const ScanInScreen:FC = () => {
   }
 }
 
-export default ScanInScreen
+export default ScanOutScreen
 
 const styles = StyleSheet.create({
   container: {
@@ -98,7 +163,6 @@ const styles = StyleSheet.create({
   modalStyle : {
     backgroundColor: 'white', 
     padding: 20,
-    height: 200,
   }
 })
 

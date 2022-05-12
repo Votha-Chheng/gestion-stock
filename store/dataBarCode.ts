@@ -1,13 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 export interface DataBarCodeState {
-  type : string
-  data: string
+  type : number
+  data: number
 }
 
 const initialState: DataBarCodeState = {
-  type : "",
-  data: ''
+  type : null,
+  data: null
 }
 
 const dataBarCodeSlice = createSlice({
@@ -15,8 +15,8 @@ const dataBarCodeSlice = createSlice({
   initialState,
   reducers: {
     resetCodeBarData: (state) => {
-      state.data = ""
-      state.type = ""
+      state.data = null
+      state.type = null
     },
     getType: (state, action) => {
       state.type = action.payload

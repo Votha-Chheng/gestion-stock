@@ -11,10 +11,22 @@ import LaunchCam from '../components/LaunchCam'
 import EnterNewProduct from '../components/EnterNewProduct'
 import { scan, unscan } from '../store/scanning'
 import { getData, getType, resetCodeBarData } from '../store/dataBarCode'
-import Toast, { BaseToast } from 'react-native-toast-message';
+import { Product } from '../models/Product'
+import EnterProduct from '../components/EnterProduct'
+import { newQtyToNumber, showToast } from '../utils'
+import { Category } from '../models/Category'
 
+type ScanInScreenProps = {
+  realm: Realm
+  allProducts: Product[]
+  allCategories: Category[]
+}
 
-const ScanInScreen:FC = () => {
+const ScanInScreen:FC<ScanInScreenProps> = ({realm, allProducts, allCategories}: ScanInScreenProps) => {
+
+  const [productExists, setProductExists] = useState<boolean>(false)
+  const [productAsProp, setProductAsProp] = useState<Product>(null)
+  const [newQty, setNewQty] = useState<string>("1")
 
   const {visible} = useSelector((state: RootState) => state.modalVisible)
   const {cameraStatus, loading, errorCam} = useSelector((state: RootState) => state.cameraPermission)
@@ -23,42 +35,74 @@ const ScanInScreen:FC = () => {
 
   const dispatch = useDispatch()
 
-  
-
   useEffect(()=>{
     dispatch(getCameraPermission())
 
+    return()=>{
+      dispatch(resetCodeBarData())
+      dispatch(hideModal())
+      dispatch(unscan())
+
+    }
   }, [])
 
-  useEffect(()=>{
-    dispatch(resetCodeBarData())
-    dispatch(hideModal())
-    dispatch(unscan())
-  }, [])
+
+  const productExistOrNot = (data: number)=>{
+    if(allProducts){
+      const product: Product[] = allProducts.filter(prod => prod._id === data)
+      console.log("Product is " + product[0])
+
+      if(product.length === 0){
+        setProductExists(false)
+
+      } else {
+      console.log("From ScanInScreen : " + product)
+      setProductExists(true)
+      setProductAsProp(product[0])
+
+      }
+    }
+  }
 
   const handleBarCodeScanned = ({ type, data }) => {
     dispatch(scan())
     dispatch(getData(data))
     dispatch(getType(type))
     dispatch(showModal())
+    productExistOrNot(data)
   }
 
-  const toastConfig = {
-    success: (props) =>(
-      <BaseToast
-        {...props}
-        style={{ borderLeftColor: 'green' }}
-        contentContainerStyle={{ paddingHorizontal: 15 }}
-        text1Style={{
-          fontSize: 15,
-          color:"green"
-        }}
-        text2Style={{
-          fontSize: 12.5,
-          color:"green"
-        }}
-      />
-    )
+  const validateNewStock = ()=>{
+    dispatch(hideModal())
+    
+    const product:any = realm.objectForPrimaryKey("Product", data.toString())
+    
+    realm.write(()=>{
+      product.qty += newQtyToNumber(newQty)
+      setProductAsProp(product)
+    })
+
+    const productUpdated:any = realm.objectForPrimaryKey("Product", data.toString())
+
+    showToast("success", "Stock mis à jour", `Stock actuel de ${productUpdated.nom} : ${productUpdated.qty} unités.`)
+    
+    setTimeout(()=>{
+      dispatch(unscan())
+    }, 1500)
+    
+    dispatch(resetCodeBarData())
+    setNewQty("1")
+
+  }
+
+  const cancelNewStock = ()=>{
+    dispatch(hideModal())
+    setTimeout(()=>{
+      dispatch(unscan())
+    }, 3000)
+    dispatch(resetCodeBarData())
+    setNewQty("1")
+    showToast("info", "Stock inchangé", "Mise à jour du stock annulée.")
   }
 
   if(loading){
@@ -67,9 +111,9 @@ const ScanInScreen:FC = () => {
     ) 
 
   } else if (cameraStatus === null){   
-      return (
-        <LaunchCam/>  
-      )
+    return (
+      <LaunchCam/>  
+    )
 
   } else if(cameraStatus === "granted"){
     return (
@@ -81,8 +125,14 @@ const ScanInScreen:FC = () => {
         <Provider>
           <Portal>
             <Modal visible={visible} dismissable={false} contentContainerStyle={styles.modalStyle}>
-              <EnterNewProduct type={type} data={data} />
-              <Toast config={toastConfig}/>
+              {
+                productExists 
+                ?
+                <EnterProduct data={data} product={productAsProp} newQty={newQty} setNewQty={setNewQty} validateNewStock={validateNewStock} cancelNewStock={cancelNewStock} />
+                :
+                <EnterNewProduct type={type} data={data} realm={realm} allCategories={allCategories} />
+              }
+              
             </Modal>
           </Portal>
         </Provider>
@@ -93,7 +143,7 @@ const ScanInScreen:FC = () => {
     return (
       <View>
         <Text style={{fontFamily:"Inter_900Black"}}>
-          {"Un problème est survenu. Assurez-vous d'avoir donné la permission pour accéder à la caméra. Si le problème persiste, redémarrez l'application."}
+          Un problème est survenu. Assurez-vous d'avoir donné la permission pour accéder à la caméra. Si le problème persiste, redémarrez l'application.
         </Text>
         <Button onPress={()=>dispatch(getCameraPermission())}>
           Relancer la caméra

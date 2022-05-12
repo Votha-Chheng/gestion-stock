@@ -1,10 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React, { FC } from 'react'
+import { Product } from '../models/Product'
 
-const ProduitsARacheter = () => {
+type ProduitsARacheterProps = {
+  realm: Realm
+  allProducts: Product[]
+}
+const ProduitsARacheter: FC<ProduitsARacheterProps> = ({realm, allProducts}: ProduitsARacheterProps) => {
   return (
     <View>
-      <Text>ProsuitsARacheter</Text>
+      <Text>ProduitsARacheter</Text>
     </View>
   )
 }

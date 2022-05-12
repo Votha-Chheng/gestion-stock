@@ -6,22 +6,29 @@ import { RootState } from '../store/store'
 import CategorySchema, { Category } from '../models/Category'
 import Toast from 'react-native-toast-message';
 import { getErrorToTrueOrFalse, getMessageError } from '../store/errorMessage'
-import ProductSchema, { Product } from '../models/Product'
-import { createButtonAlert } from '../utils'
+import { Product } from '../models/Product'
+import { createButtonAlert, setInitialToUpperCase } from '../utils'
 import Loader from './Loader'
 import NewProductFabricant from './NewProductFabricant'
 import globalStyles from '../globalStyles'
 import NewProductName from './NewProductName'
 import CategoryPicker from './CategoryPicker'
 import Realm from 'realm'
+import { createNewCategory, fetchAllCategories, fetchCategoryByName } from '../actions/categoryActions'
+import { createProduct } from '../actions/productActions'
+import { hideModal } from '../store/modal'
+import { resetCodeBarData } from '../store/dataBarCode'
+import { unscan } from '../store/scanning'
 
 
 type NewProductProps = {
-  type: string
-  data: string
+  type: number
+  data: number
+  realm: Realm
+  allCategories: Category[]
 }
 
-const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
+const EnterNewProduct:FC<NewProductProps> = ({data, type, realm, allCategories}: NewProductProps) => {
 
   const [fabricant, setFabricant] = useState<string>("")
   const [chooseCategory, setChooseCategory] = useState<Category>({_id: null, nom: ""})
@@ -35,10 +42,8 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
   const [displayTel, setDisplayTel] = useState<string>("")
   const [webSite, setWebSite] = useState<string>("")
   const [loadingCreation, setLoadingCreation] = useState<boolean>(false)
-  const [realm, setRealm] = useState<any>(null)
 
-  const {visible} = useSelector((state: RootState) => state.modalVisible)
-  const {scanned} = useSelector((state: RootState) => state.scanning)
+
   const {error, message} = useSelector((state: RootState) => state.errorMessage)
 
   const dispatch = useDispatch()
@@ -50,132 +55,68 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
     }
   }, [error])
 
-  useEffect(()=>{
-    Realm.open({
-      path:"myrealm",
-      schema: [ProductSchema, CategorySchema],
-      deleteRealmIfMigrationNeeded: true,
-    })
-    .then(realm => {
-      setRealm(realm)
-
-    })
-
-    return(()=>{
-      if (realm !== null && !realm.isClosed) {
-        realm.close();
-      }
-    })
-    
-  }, [])
-
-  const showToast = (type: string, message1: string, message2: string)=>{
-    Toast.show({
-      type,
-      text1: message1,
-      text2:  message2
-    });
-  }
 
   const onPressAlert = ()=>{
     dispatch(getErrorToTrueOrFalse(false))
     dispatch(getMessageError(""))
   }
   
-  const createProduct = async ()=>{
-    try {
-      let newProduct: Product
-
-      setLoadingCreation(true)
-
-      realm.write(()=>{
-        newProduct = realm.create("Product", {
-          _id: data,
-          codeBarType: type.toString(),
-          nom: nom,
-          marque: fabricant,
-          categorie: realm.objectForPrimaryKey("Category", chooseCategory._id),
-          telFournisseur: +telFournisseur,
-          siteFournisseur : webSite,
-          qty:+quantity,
-          stockLimite:+stockLimite
-        })
-      })
-
-      showToast("success","Succès", `${newProduct.nom} a été ajouté dans l'inventaire.`)
-
-    } catch (error) {
-      console.log(error.message)
-      showToast("error", "Erreur", "Un problème est survenu. Recommencez l'opération.")
-      dispatch(getMessageError("Impossible de trouver la catégorie."))
-
-      return
+  const validateProductCreation = ()=>{
+    const obj: Product = {
+      _id: data,
+      codeBarType: type.toString(),
+      nom: nom,
+      marque: fabricant,
+      categorie: realm.objectForPrimaryKey("Category", chooseCategory._id),
+      telFournisseur: telFournisseur,
+      siteFournisseur : webSite,
+      qty:+quantity,
+      stockLimite:+stockLimite,
+      commandeEncours: false
     }
+
+    createProduct(realm, obj)
+
+    dispatch(hideModal())
+
+    dispatch(resetCodeBarData())
+
+    setTimeout(()=>{
+      dispatch(unscan())
+    }, 3000)
   }
 
 
-  const getSingleCategory = async (catName=null, id=null): Promise<void> => {
+  const getSingleCategory =  (catName=null, id=null): void => {
     let singleCategory = null
-    let category = null
 
-    try {
-      realm.write(()=>{
+    realm.write(()=>{
 
-        const tempCategories = realm.objects("Category")
+      const tempCategories = realm.objects("Category")
 
-        if(tempCategories === null){
-          return {errorMsg: "Nothing to find."}
-        }
+      if(tempCategories === null){
+        return {errorMsg: "Nothing to find."}
+      }
 
-        if(catName !== null){
-          singleCategory = tempCategories.filtered(`nom = "${catName}"`)
+      if(catName !== null){
+        singleCategory = tempCategories.filtered(`nom = "${catName}"`)
 
-        } else if( id!==null) {
-          singleCategory = tempCategories.filtered(`_id = ${id}`)
+      } else if( id!==null) {
+        singleCategory = tempCategories.filtered(`_id = ${id}`)
 
-        }
+      }
 
-        setChooseCategory({_id: singleCategory[0]._id, nom: singleCategory[0].nom})
-        console.log(chooseCategory._id)
-      })
+      setChooseCategory({_id: singleCategory[0]._id, nom: singleCategory[0].nom})
+
+    })
     
-    } catch (err){
-      console.log(err.message)
 
-      showToast("error", "Erreur", err.message)
-    } 
   }  
 
-  const createNewCategory = async()=>{
-    try {
-      realm.write(()=>{
-        const categories = realm.objects("Category")
-        const categoryExist = categories.filtered(`nom = "${newCategory}"`)
-
-        console.log("categoryExist " + categoryExist)
-
-        if(categoryExist.length>0){
-          showToast("error", "Impossible d'ajouter", "Cette catégorie existe déjà.")
-
-        } else {
-            realm.create("Category", {
-            _id: Date.now(),
-            nom : newCategory
-          })
-          
-          showToast("success", "Parfait !", "Nouvelle catégorie créee.")
-        }
-      
-      })
-
-      setCreateCatMode(false)
-
-    } catch (err) {
-      showToast("error", "Impossible d'ajouter", "Une erreur est survenue.")
-      console.log(err.message)
-      return
-
-    }
+  const validateNewCategory = (realm: Realm, newCategory: string)=>{
+    createNewCategory(realm, newCategory)
+    setCreateCatMode(false)
+    setChooseCategory(fetchCategoryByName(allCategories, setInitialToUpperCase(newCategory.trim())))
   }
 
   const deleteAllCategories = async()=>{
@@ -249,22 +190,13 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
             <Text style={styles.type}>{data}</Text>
           </Text>
         </View>
+
         <NewProductFabricant fabricant={fabricant} onChangeFabricant ={setFabricant}/>
-        
-        {
-          <Text>
-            {chooseCategory && chooseCategory._id}
-          </Text>
-        }
 
         <NewProductName nom={nom} onChangeName={setNom} />
 
         {/* <Button onPress={deleteAllCategories} mode='contained'>
           Supprimer toutes les catégories
-        </Button> */}
-
-        {/* <Button onPress={showToast} mode='contained'>
-          Toast
         </Button> */}
 
         <CategoryPicker
@@ -275,7 +207,7 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
           onBlur={()=>setFocused(false)}
           newCategory={newCategory}
           onChangeCategory={setNewCategory}
-          createNewCategory = {createNewCategory}
+          createNewCategory = {()=>validateNewCategory(realm, newCategory)}
           createCatMode={createCatMode}
           createCatModeToFalse={()=>setCreateCatMode(false)}
           realm = {realm}
@@ -315,9 +247,7 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
             value={displayTel}
             activeOutlineColor="#a25553"
             outlineColor='#c4cfd4'
-            onChangeText={text => {
-              setTelFournisseur(text)
-            }}
+            onChangeText={text => setTelFournisseur(text)}
             onFocus={()=>setDisplayTel(unspaceTel(telFournisseur))}
             onBlur={()=>setDisplayTel(spaceTelFournisseur(telFournisseur))}
             autoComplete={false}
@@ -343,7 +273,7 @@ const EnterNewProduct:FC<NewProductProps> = ({data, type}: NewProductProps) => {
         <Button
           mode='contained'
           icon='check-bold'
-          onPress={() => createProduct()}
+          onPress={() => validateProductCreation()}
         >
           Valider les informations
         </Button>

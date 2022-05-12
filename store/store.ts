@@ -6,7 +6,6 @@ import scanningReducer from "./scanning"
 import codeBarDataTypeReducer from "./dataBarCode"
 import errorMessageReducer from './errorMessage'
 
-
 const store = configureStore({
   reducer: {
     modalVisible: modalReducer,
@@ -14,7 +13,6 @@ const store = configureStore({
     scanning : scanningReducer,
     codeBarDataType : codeBarDataTypeReducer,
     errorMessage : errorMessageReducer,
-
   }
 })
 
